@@ -19,10 +19,10 @@ class Logger: ObservableObject {
     @Published var logs: [String] = []
     private var lastwasdivider = false
     private var pendingdivider = false
-    private var stdoutPipe: Pipe?
-    private var pendingLine = ""
-    private var originalStdout: Int32 = -1
-    private var originalStderr: Int32 = -1
+    private var stdoutpipe: Pipe?
+    private var panding = ""
+    private var ogstdout: Int32 = -1
+    private var ogstderr: Int32 = -1
 
     init() {}
 
@@ -42,7 +42,7 @@ class Logger: ObservableObject {
             self.lastwasdivider = false
         }
 
-        emitToConsole(message)
+        emit(message)
     }
 
     func divider() {
@@ -85,14 +85,14 @@ class Logger: ObservableObject {
         }
     }
 
-    func startCapture() {
-        if stdoutPipe != nil { return }
+    func capture() {
+        if stdoutpipe != nil { return }
 
         let pipe = Pipe()
-        stdoutPipe = pipe
+        stdoutpipe = pipe
 
-        originalStdout = dup(STDOUT_FILENO)
-        originalStderr = dup(STDERR_FILENO)
+        ogstdout = dup(STDOUT_FILENO)
+        ogstderr = dup(STDERR_FILENO)
 
         setvbuf(stdout, nil, _IOLBF, 0)
         setvbuf(stderr, nil, _IOLBF, 0)
@@ -104,29 +104,29 @@ class Logger: ObservableObject {
             let data = handle.availableData
             if data.isEmpty { return }
             guard let chunk = String(data: data, encoding: .utf8), !chunk.isEmpty else { return }
-            self?.appendRaw(chunk)
+            self?.appendraw(chunk)
         }
     }
 
-    private func appendRaw(_ chunk: String) {
-        var text = pendingLine + chunk
+    private func appendraw(_ chunk: String) {
+        var text = panding + chunk
         var lines = text.components(separatedBy: "\n")
-        pendingLine = lines.removeLast()
+        panding = lines.removeLast()
         if !lines.isEmpty {
             DispatchQueue.main.async {
                 self.logs.append(contentsOf: lines)
             }
             for line in lines {
-                emitToConsole(line)
+                emit(line)
             }
         }
     }
 
-    private func emitToConsole(_ message: String) {
-        guard originalStdout != -1 else { return }
+    private func emit(_ message: String) {
+        guard ogstdout != -1 else { return }
         let line = message + "\n"
         line.withCString { ptr in
-            _ = Darwin.write(originalStdout, ptr, strlen(ptr))
+            _ = Darwin.write(ogstdout, ptr, strlen(ptr))
         }
     }
 }
@@ -141,20 +141,28 @@ struct LogsView: View {
                     Text(log)
                         .font(.system(size: 13, design: .monospaced))
                         .lineSpacing(1)
-                        .listRowInsets(EdgeInsets(top: 2, leading: 8, bottom: 2, trailing: 8))
                         .onTapGesture {
                             UIPasteboard.general.string = log
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         }
                 }
             }
-            .listStyle(.plain)
             .navigationTitle("Logs")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Clear") { logger.logs.removeAll() }
-                        .foregroundColor(.red)
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    
+                    Button {
+                        let allLogs = logger.logs.joined(separator: "\n\n")
+                        UIPasteboard.general.string = allLogs
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                    }
+                    
+                    Button("Clear") {
+                        globallogger.clear()
+                    }
+                    .foregroundColor(.red)
                 }
             }
         }
