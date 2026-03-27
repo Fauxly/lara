@@ -23,6 +23,11 @@ class Logger: ObservableObject {
     private var panding = ""
     private var ogstdout: Int32 = -1
     private var ogstderr: Int32 = -1
+    private let ignoredLogSubstrings = [
+        "Faulty glyph",
+        "outline detected - replacing with a space/null glyph",
+        "/System/Library/Fonts/Core/SFUI.ttf"
+    ]
 
     init() {}
 
@@ -113,21 +118,32 @@ class Logger: ObservableObject {
         var lines = text.components(separatedBy: "\n")
         panding = lines.removeLast()
         if !lines.isEmpty {
+            let filtered = lines.filter { !shouldIgnore($0) }
             DispatchQueue.main.async {
-                self.logs.append(contentsOf: lines)
+                self.logs.append(contentsOf: filtered)
             }
-            for line in lines {
+            for line in filtered {
                 emit(line)
             }
         }
     }
 
     private func emit(_ message: String) {
+        if shouldIgnore(message) { return }
         guard ogstdout != -1 else { return }
         let line = message + "\n"
         line.withCString { ptr in
             _ = Darwin.write(ogstdout, ptr, strlen(ptr))
         }
+    }
+
+    private func shouldIgnore(_ message: String) -> Bool {
+        for fragment in ignoredLogSubstrings {
+            if message.contains(fragment) {
+                return true
+            }
+        }
+        return false
     }
 }
 
