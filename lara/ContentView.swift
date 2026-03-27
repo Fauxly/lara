@@ -72,7 +72,7 @@ struct ContentView: View {
                         }
                     }
 
-                    Section("Kernel File System (broken)") {
+                    Section("Kernel File System") {
                         Button("Initialize KFS") {
                             mgr.kfsinit()
                         }
