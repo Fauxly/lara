@@ -32,18 +32,29 @@ struct ContentView: View {
                     }
                 } else {
                     Section("Kernel Read Write") {
-                        Button(mgr.dsrunning ? "Running..." : "Run Exploit") {
+                        Button {
                             mgr.run()
+                        } label: {
+                            if mgr.dsrunning {
+                                HStack {
+                                    ProgressView()
+                                    Text("Running...")
+                                }
+                            } else {
+                                if mgr.dsready {
+                                    HStack {
+                                        Text("Ran Exploit")
+                                        Spacer()
+                                        Image(systemName: "checkmark.circle")
+                                            .foregroundColor(.green)
+                                    }
+                                } else {
+                                    Text("Run Exploit")
+                                }
+                            }
                         }
                         .disabled(mgr.dsrunning)
                         .disabled(mgr.dsready)
-                        
-                        HStack {
-                            Text("krw ready?")
-                            Spacer()
-                            Text(mgr.dsready ? "Yes" : "No")
-                                .foregroundColor(mgr.dsready ? .green : .red)
-                        }
                         
                         HStack {
                             Text("kernproc:")
