@@ -1,34 +1,65 @@
-name: build
+name: buildnrelease
 
 on:
-push:
-branches: [ main ]
-pull_request:
+  push:
+    branches: [ main ]
+  pull_request:
 
 jobs:
-build:
-runs-on: macos-latest
+  build-and-release:
+    runs-on: macos-latest
+    steps:
+      - name: checkout 
+        uses: actions/checkout@v4
 
-```
-steps:
-  - name: checkout
-    uses: actions/checkout@v4
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
 
-  - name: select xcode
-    run: sudo xcode-select -s /Applications/Xcode.app
+      - name: show xcode version
+        run: xcodebuild -version
 
-  - name: show xcode version
-    run: xcodebuild -version
+      - name: build
+        run: |
+          xcodebuild \
+            -project lara.xcodeproj \
+            -scheme lara \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
 
-  - name: build
-    run: |
-      xcodebuild \
-        -project tree/main/lara.xcodeproj \
-        -scheme lara \
-        -configuration Debug \
-        -sdk iphonesimulator \
-        CODE_SIGNING_ALLOWED=NO \
-        CODE_SIGNING_REQUIRED=NO \
-        CODE_SIGN_IDENTITY="" \
-        build
-```
+      - name: intall gh cli 
+        run: |
+          brew install gh || echo "gh already installed"
+
+      - name: auth gh CLI
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh auth login --with-token <<< "$GITHUB_TOKEN"
+
+      - name: handle archival shit
+        id: handle_release
+        run: |
+          LATEST=$(gh release list --limit 1 --json tagName,createdAt | jq -r '.[0].tagName')
+          echo "latest release: $LATEST"
+
+          if [ "$LATEST" != "null" ]; then
+            SHA=$(gh release view "$LATEST" --json targetCommitish -q '.targetCommitish')
+            echo "tagging old release as '${LATEST}-old'"
+            git tag "${LATEST}-old" "$SHA"
+            git push origin "${LATEST}-old"
+
+            gh release delete "$LATEST" --yes
+          fi
+
+      - name: new release
+        run: |
+          COMMITS=$(git log --since="12 hours ago" --pretty=format:"- %s (%an)")
+          TAG="latest ($(date +%Y%m%d%H%M%S))"
+          
+          gh release create "$TAG" tree/main/build/Debug-iphonesimulator/lara.ipa \
+            --title "$TAG" \
+            --notes "$COMMITS" \
+            --prerelease
