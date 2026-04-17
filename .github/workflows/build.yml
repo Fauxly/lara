@@ -11,12 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: macos-26
-    strategy:
-      matrix:
-        include:
-          - arch: arm64e
-            flag: ""
-            suffix: ""
             
     steps:
       - name: checkout
@@ -33,11 +27,7 @@ jobs:
       - name: build
         run: |
           chmod +x scripts/build_ipa.sh
-          LARA_LDID_SIGN=0 ./scripts/build_ipa.sh ${{ matrix.flag }}
-
-      - name: rename ipa
-        if: matrix.suffix != ''
-        run: mv dist/lara.ipa dist/lara${{ matrix.suffix }}.ipa
+          ./scripts/build_ipa.sh
 
       - name: upload build artifact
         if: github.event_name == 'pull_request'
@@ -45,15 +35,14 @@ jobs:
         with:
           name: lara-ipa${{ matrix.suffix }}
           path: |
-            dist/lara${{ matrix.suffix }}.ipa
-            build/xcodebuild.log
+            build/lara.ipa
 
       - name: upload ipa for release
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: release-ipa${{ matrix.suffix }}
-          path: dist/lara${{ matrix.suffix }}.ipa
+          path: build/lara.ipa
 
   release:
     if: github.event_name != 'pull_request'
@@ -70,7 +59,7 @@ jobs:
         with:
           pattern: release-ipa*
           merge-multiple: true
-          path: dist/
+          path: build/
 
       - name: create release tag
         id: tag
@@ -115,6 +104,6 @@ jobs:
           name: Latest Build
           body: ${{ env.COMMITS }}
           files: |
-            dist/lara.ipa
+            build/lara.ipa
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
