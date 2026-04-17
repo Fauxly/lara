@@ -482,17 +482,18 @@ final class laramgr: ObservableObject {
         }
     }
     
-    func rcdestroy() {
+    func rcdestroy(completion: (() -> Void)? = nil) {
         guard remotecallrunning else { return }
         
         logmsg("destroying remote call session...")
+        remotecallrunning = false
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             destroy_remote_call()
             
             DispatchQueue.main.async {
-                self?.remotecallrunning = false
                 self?.logmsg("remote call session destroyed")
+                completion?()
             }
         }
     }

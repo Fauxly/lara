@@ -179,7 +179,7 @@ struct AppsView: View {
                             bundleid: bundleid,
                             bundlepath: bundlepath,
                             hasmobileprov: hasMP,
-                            notbypassed: validated
+                            notbypassed: !validated
                         )
                     )
                 }
@@ -245,7 +245,7 @@ struct AppsView: View {
                             
                             Spacer()
                             
-                            if isbypassed(bundlepath: app.bundlepath) {
+                            if !app.notbypassed {
                                 Image(systemName: "checkmark.circle")
                                     .foregroundColor(.green)
                             }

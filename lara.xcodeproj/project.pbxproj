@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		9F4A1D2F3C4E567890123456 /* lara/lib/libxpf.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4A1D2E3C4E567890123456 /* lara/lib/libxpf.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		9F4A1D423C4E567890123456 /* lara/lib/libgrabkernel2.dylib in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 9F4A1D413C4E567890123456 /* lara/lib/libgrabkernel2.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
-		CCB7BB7F2F8EC5EB00FCDECB /* ZIPFoundation in Frameworks */ = {isa = PBXBuildFile; productRef = CCB7BB7E2F8EC5EB00FCDECB /* ZIPFoundation */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -71,7 +70,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				CCB7BB7F2F8EC5EB00FCDECB /* ZIPFoundation in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -137,7 +135,6 @@
 			);
 			name = lara;
 			packageProductDependencies = (
-				CCB7BB7E2F8EC5EB00FCDECB /* ZIPFoundation */,
 			);
 			productName = lara;
 			productReference = CC1C8B392F71DF9C00206982 /* lara.app */;
@@ -168,7 +165,6 @@
 			mainGroup = CC1C8B302F71DF9C00206982;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				CCB7BB7D2F8EC5EB00FCDECB /* XCRemoteSwiftPackageReference "ZIPFoundation" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = CC1C8B3A2F71DF9C00206982 /* Products */;
@@ -461,25 +457,6 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
-
-/* Begin XCRemoteSwiftPackageReference section */
-		CCB7BB7D2F8EC5EB00FCDECB /* XCRemoteSwiftPackageReference "ZIPFoundation" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/weichsel/ZIPFoundation.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.9.20;
-			};
-		};
-/* End XCRemoteSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		CCB7BB7E2F8EC5EB00FCDECB /* ZIPFoundation */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = CCB7BB7D2F8EC5EB00FCDECB /* XCRemoteSwiftPackageReference "ZIPFoundation" */;
-			productName = ZIPFoundation;
-		};
-/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = CC1C8B312F71DF9C00206982 /* Project object */;
 }

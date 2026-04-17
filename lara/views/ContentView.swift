@@ -331,6 +331,10 @@ struct ContentView: View {
                                             EditorView()
                                         }
                                         
+                                        NavigationLink("3 App Bypass") {
+                                            AppsView(mgr: mgr)
+                                        } 
+                                        
                                         NavigationLink("Whitelist") {
                                             WhitelistView()
                                         }
@@ -339,11 +343,11 @@ struct ContentView: View {
                                             ZeroView(mgr: mgr)
                                         }
                                         
-                                        NavigationLink("3 App Bypass") {
-                                            AppsView(mgr: mgr)
-                                        }
-                                        
                                         if 1 == 2 {
+                                            NavigationLink("Control Center") {
+                                                CCView()
+                                            }
+                                            
                                             NavigationLink("Passcode Theme") {
                                                 PasscodeView(mgr: mgr)
                                             }
@@ -382,6 +386,10 @@ struct ContentView: View {
                         .disabled(!mgr.dsready || mgr.remotecallrunning)
                         
                         if mgr.remotecallrunning {
+                            NavigationLink("Tweaks") {
+                                RemoteView(mgr: mgr)
+                            }
+                            
                             Button("Destroy RemoteCall") {
                                 mgr.rcdestroy()
                             }
@@ -389,8 +397,12 @@ struct ContentView: View {
                     } header: {
                         Text("RemoteCall")
                     } footer: {
-                        Text("hopefully not broken anymore, but still useless. -baconmania")
+                        if isdebugged() {
+                            Text("Not available when a debugger is attached.")
+                        }
+                        Text("RemoteCall is still in development and may not work properly 100% of the time.")
                     }
+                    .disabled(isdebugged())
                     #endif
                     
                     Section {

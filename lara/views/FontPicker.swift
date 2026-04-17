@@ -39,6 +39,7 @@ struct FontPicker: View {
     @StateObject private var repostore = fontrepostore()
     @State private var showrepomgr = false
     @State private var selectedTarget: styletarget = .standard
+    private let emojipath = "/System/Library/Fonts/CoreAddition/AppleColorEmoji-160px.ttc"
 
     var body: some View {
         NavigationStack {
@@ -60,6 +61,7 @@ struct FontPicker: View {
                             HStack {
                                 Text("Loading...")
                                 Spacer()
+                                
                                 if repo.isloading {
                                     ProgressView()
                                 } else if let error = repo.error {
@@ -73,7 +75,19 @@ struct FontPicker: View {
                         Text(repo.data?.name ?? repo.url)
                     }
                 }
-                
+
+                ForEach(repostore.repos) { repo in
+                    if let repodata = repo.data, !repodata.emojis.isEmpty {
+                        Section {
+                            ForEach(repodata.emojis) { emoji in
+                                repoemojirow(mgr: mgr, repo: repodata, emoji: emoji, repostore: repostore, emojipath: emojipath)
+                            }
+                        } header: {
+                            Text("Emojis — \(repodata.name)")
+                        }
+                    }
+                }
+	                
                 Section {
                     Picker("Target Style", selection: $selectedTarget) {
                         ForEach(styletarget.allCases, id: \.self) { target in
@@ -249,20 +263,34 @@ struct fontrepostate: Identifiable {
     }
 }
 
-struct fontrepodata: Decodable, Identifiable {
-    var id: String { name }
-    let name: String
-    let author: String
-    let icon: String?
-    let fonts: [fontrepofont]
+	struct fontrepodata: Decodable, Identifiable {
+	    var id: String { name }
+	    let name: String
+	    let author: String
+	    let icon: String?
+	    let fonts: [fontrepofont]
+	    let emojis: [fontrepofont]
 
-    enum CodingKeys: String, CodingKey {
-        case name = "repo_name"
-        case author = "repo_author"
-        case icon = "repo_icon"
-        case fonts
-    }
-}
+	    enum CodingKeys: String, CodingKey {
+	        case name = "repo_name"
+	        case author = "repo_author"
+	        case icon = "repo_icon"
+	        case fonts
+	        case emojis
+	        case emoji
+	    }
+
+	    init(from decoder: Decoder) throws {
+	        let container = try decoder.container(keyedBy: CodingKeys.self)
+	        name = try container.decode(String.self, forKey: .name)
+	        author = try container.decode(String.self, forKey: .author)
+	        icon = try container.decodeIfPresent(String.self, forKey: .icon)
+	        fonts = try container.decodeIfPresent([fontrepofont].self, forKey: .fonts) ?? []
+	        emojis = try container.decodeIfPresent([fontrepofont].self, forKey: .emojis)
+	            ?? container.decodeIfPresent([fontrepofont].self, forKey: .emoji)
+	            ?? []
+	    }
+	}
 
 struct fontrepofont: Decodable, Identifiable {
     var id: String { url }
@@ -301,6 +329,36 @@ struct repofontrow: View {
                         : .system(size: 17))
                 Spacer()
                 if repostore.downloading.contains(font.url) {
+                    ProgressView()
+                }
+            }
+        }
+    }
+}
+
+private struct repoemojirow: View {
+    @ObservedObject var mgr: laramgr
+    let repo: fontrepodata
+    let emoji: fontrepofont
+    @ObservedObject var repostore: fontrepostore
+    let emojipath: String
+
+    var body: some View {
+        let localurl = localemojiurl(repo: repo, emoji: emoji)
+        let isdownloaded = localurl.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
+
+        Button {
+            if isdownloaded, let localurl {
+                let success = mgr.vfsoverwritefromlocalpath(target: emojipath, source: localurl.path)
+                success ? mgr.logmsg("emoji changed to \(emoji.name)") : mgr.logmsg("failed to change emojis")
+            } else {
+                Task { await repostore.dlemoji(emoji, repo: repo) }
+            }
+        } label: {
+            HStack {
+                Text(emoji.name)
+                Spacer()
+                if repostore.downloading.contains(emoji.url) {
                     ProgressView()
                 }
             }
@@ -417,6 +475,15 @@ private func localfonturl(repo: fontrepodata, font: fontrepofont) -> URL? {
     return repoDir.appendingPathComponent(remoteurl.lastPathComponent)
 }
 
+private func localemojiurl(repo: fontrepodata, emoji: fontrepofont) -> URL? {
+    guard let remoteurl = URL(string: emoji.url) else { return nil }
+    let fm = FileManager.default
+    let docs = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    let repoDir = docs.appendingPathComponent("EmojiRepos")
+        .appendingPathComponent(sanitizefilename(repo.name))
+    return repoDir.appendingPathComponent(remoteurl.lastPathComponent)
+}
+
 private func sanitizefilename(_ name: String) -> String {
     let allowed = CharacterSet.alphanumerics.union(.init(charactersIn: "._-"))
     let cleaned = name.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
@@ -515,6 +582,31 @@ final class fontrepostore: ObservableObject {
 
         guard let remoteurl = URL(string: font.url) else { return }
         guard let localurl = localfonturl(repo: repo, font: font) else { return }
+        if FileManager.default.fileExists(atPath: localurl.path) { return }
+
+        do {
+            let (tempurl, _) = try await URLSession.shared.download(from: remoteurl)
+            let fm = FileManager.default
+            try fm.createDirectory(at: localurl.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if fm.fileExists(atPath: localurl.path) {
+                try fm.removeItem(at: localurl)
+            }
+            try fm.moveItem(at: tempurl, to: localurl)
+        } catch {
+            await MainActor.run {
+                if let idx = repos.firstIndex(where: { $0.data?.name == repo.name }) {
+                    repos[idx].error = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    func dlemoji(_ emoji: fontrepofont, repo: fontrepodata) async {
+        await MainActor.run { downloading.insert(emoji.url) }
+        defer { Task { @MainActor in downloading.remove(emoji.url) } }
+
+        guard let remoteurl = URL(string: emoji.url) else { return }
+        guard let localurl = localemojiurl(repo: repo, emoji: emoji) else { return }
         if FileManager.default.fileExists(atPath: localurl.path) { return }
 
         do {

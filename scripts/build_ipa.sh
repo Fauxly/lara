@@ -91,7 +91,7 @@ prepare_maccatalyst_linker_path_workaround() {
   fi
 
   local pkg
-  for pkg in ZIPFoundation SWCompression BitByteData; do
+  for pkg in SWCompression BitByteData; do
     local release_dir="$intermediates_dir/${pkg}.build/Release"
     local macabi_dir="$intermediates_dir/${pkg}.build/Release-maccatalyst"
     mkdir -p "$release_dir"
