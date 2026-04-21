@@ -66,7 +66,7 @@ struct EditorView: View {
         _selectedSubType = State(initialValue: subType)
         // This only happens on the first load
         if ogSubType == -1 {
-            ogSubType = selectedSubType
+            ogSubType = subType
         }
 
     }
