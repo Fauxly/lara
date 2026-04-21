@@ -19,6 +19,38 @@ struct RemoteView: View {
     var body: some View {
         List {
             Section {
+                NavigationLink("SBCustomizer") {
+                    Section {
+                        Stepper(value: $columns, in: 1...dockMaxColumns) {
+                            HStack {
+                                Text("Dock columns")
+                                Spacer()
+                                Text("\(columns)")
+                                    .foregroundColor(.secondary)
+                                    .monospacedDigit()
+                            }
+                        }
+                        .onChange(of: rcdockunlimited) { _ in
+                            if !rcdockunlimited, columns > 10 {
+                                columns = 10
+                            }
+                        }
+
+                        Button {
+                            run("Apply Dock Columns=\(columns)") {
+                                let result = set_dock_icon_count(mgr.sbProc, Int32(columns))
+                                return "set_dock_icon_count(\(columns)) -> \(result)"
+                            }
+                        } label: {
+                            Text("Apply Dock Columns")
+                        }
+                    }
+                }
+            } header: {
+                Text("Tweaks")
+            }
+            
+            Section {
                 Button {
                     run("Status Bar Time Format") {
                         status_bar_tweak(mgr.sbProc)
@@ -37,33 +69,7 @@ struct RemoteView: View {
                     Text("Hide Icon Labels")
                 }
             } header: {
-                Text("SpringBoard")
-            }
-
-            Section {
-                Stepper(value: $columns, in: 1...dockMaxColumns) {
-                    HStack {
-                        Text("Dock columns")
-                        Spacer()
-                        Text("\(columns)")
-                            .foregroundColor(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .onChange(of: rcdockunlimited) { _ in
-                    if !rcdockunlimited, columns > 10 {
-                        columns = 10
-                    }
-                }
-
-                Button {
-                    run("Apply Dock Columns=\(columns)") {
-                        let result = set_dock_icon_count(mgr.sbProc, Int32(columns))
-                        return "set_dock_icon_count(\(columns)) -> \(result)"
-                    }
-                } label: {
-                    Text("Apply Dock Columns")
-                }
+                Text("Other")
             }
 
             Section {
@@ -152,6 +158,35 @@ struct RemoteView: View {
                 }
                 .onTapGesture {
                     if let url = URL(string: "https://github.com/khanhduytran0"),
+                       UIApplication.shared.canOpenURL(url) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+                
+                HStack(alignment: .top) {
+                    AsyncImage(url: URL(string: "https://github.com/zeroxjf.png")) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        ProgressView()
+                    }
+                    .frame(width: 40, height: 40)
+                    .clipShape(Circle())
+                    
+                    VStack(alignment: .leading) {
+                        Text("0xjf")
+                            .font(.headline)
+                        
+                        Text("Powercuff and SBCustomizer")
+                            .font(.subheadline)
+                            .foregroundColor(Color.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .onTapGesture {
+                    if let url = URL(string: "https://github.com/zeroxjf"),
                        UIApplication.shared.canOpenURL(url) {
                         UIApplication.shared.open(url)
                     }
