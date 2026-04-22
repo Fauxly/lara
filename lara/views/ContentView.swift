@@ -549,14 +549,7 @@ struct ContentView: View {
                         }
 
                         Button("Respring") {
-                            mgr.showRespringView = true
-                        }
-                        .fullScreenCover(isPresented: $mgr.showRespringView) {
-                            if mgr.showRespringView {
-                                RespringView()
-                                    .brightness(-1.0)
-                                    .ignoresSafeArea()
-                            }
+                            mgr.respring()
                         }
 
                         Button("Panic!") {
