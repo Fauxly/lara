@@ -131,12 +131,13 @@ struct EditorView: View {
             .alert("Done", isPresented: .constant(alert != nil)) {
                 Button("Cancel") { alert = nil }
                 Button("Respring") {
-                    .overlay {
-                        if mgr.showRespringView {
-                            RespringView()
-                                .brightness(-1.0)
-                                .ignoresSafeArea()
-                        }
+                    mgr.showRespringView = true
+                }
+                .fullScreenCover(isPresented: $mgr.showRespringView) {
+                    if mgr.showRespringView {
+                        RespringView()
+                            .brightness(-1.0)
+                            .ignoresSafeArea()
                     }
                 }
             } message: {

@@ -549,12 +549,13 @@ struct ContentView: View {
                         }
 
                         Button("Respring") {
-                            .overlay {
-                                if mgr.showRespringView {
-                                    RespringView()
-                                        .brightness(-1.0)
-                                        .ignoresSafeArea()
-                                }
+                            mgr.showRespringView = true
+                        }
+                        .fullScreenCover(isPresented: $mgr.showRespringView) {
+                            if mgr.showRespringView {
+                                RespringView()
+                                    .brightness(-1.0)
+                                    .ignoresSafeArea()
                             }
                         }
 

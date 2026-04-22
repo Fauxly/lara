@@ -74,16 +74,15 @@ struct ToolsView: View {
             }
             
             Section {
-                Button {
-                    .overlay {
-                        if mgr.showRespringView {
-                            RespringView()
-                                .brightness(-1.0)
-                                .ignoresSafeArea()
-                        }
+                Button("Respring") {
+                    mgr.showRespringView = true
+                }
+                .fullScreenCover(isPresented: $mgr.showRespringView) {
+                    if mgr.showRespringView {
+                        RespringView()
+                            .brightness(-1.0)
+                            .ignoresSafeArea()
                     }
-                } label: {
-                    Text("Respring")
                 }
                 
                 HStack {

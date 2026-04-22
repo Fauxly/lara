@@ -97,6 +97,7 @@ final class laramgr: ObservableObject {
     @Published var sbxfailed: Bool = false
     @Published var sbxrunning: Bool = false
     @Published var rcready: Bool = false
+    @Published var showRespringView: Bool = false
     
     var sbProc: RemoteCall?
     
