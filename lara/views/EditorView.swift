@@ -37,7 +37,7 @@ struct EditorView: View {
         }
     }
     
-    private let path = "/var/mobile/Documents/mbgtest.plist" // "/var/containers/Shared/SystemGroup/systemgroup.com.apple.mobilegestaltcache/Library/Caches/com.apple.MobileGestalt.plist"
+    private let path = "/var/containers/Shared/SystemGroup/systemgroup.com.apple.mobilegestaltcache/Library/Caches/com.apple.MobileGestalt.plist"
     private let ogmgurl: URL
 
     init() {
@@ -104,7 +104,7 @@ struct EditorView: View {
                     // Toggle("Internal stuff", isOn: bindingForInternalStuff())
                     Toggle("Security Research Device", isOn: mgkeybinding(["XYlJKKkj2hztRP1NWWnhlw"]))
                     Toggle("Metal HUD for all apps", isOn: mgkeybinding(["EqrsVvjcYDdxHBiQmGhAWw"]))
-                    Toggle("Stage Manager (iPad Only?)", isOn: mgkeybinding(["qeaj75wk3HF4DwQ8qbIi7g"]))
+                    Toggle("Stage Manager", isOn: mgkeybinding(["qeaj75wk3HF4DwQ8qbIi7g"]))
                         .disabled(UIDevice.current.userInterfaceIdiom != .pad)
                     if UIDevice._hasHomeButton() {
                         Toggle("Tap to Wake (iPhone SE)", isOn: mgkeybinding(["yZf3GTRMGTuwSV/lD7Cagw"]))
