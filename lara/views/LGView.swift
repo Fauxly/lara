@@ -84,7 +84,7 @@ struct LGView: View {
                 } header: {
                     Text("Actions")
                 } footer: {
-                    Text("Use at your own risk. Always keep a backup of \"/var/Managed Preferences/.GlobalPreferences.plist\" somewhere safe.")
+                    Text("Use at your own risk. Always keep a backup of \"/var/Managed Preferences/mobile/.GlobalPreferences.plist\" somewhere safe.")
                 }
             }
             .navigationTitle("Liquid Glass")
