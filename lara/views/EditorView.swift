@@ -116,9 +116,11 @@ struct EditorView: View {
                 }
                 Section {
                     let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary
-                    Toggle("Become iPadOS", isOn: bindingForTrollPad())
-                    // validate DeviceClass
-                        .disabled(cacheExtra?["+3Uf0Pm5F8Xy7Onyvko0vA"] as? String != "iPhone")
+                Group {
+                    Toggle("Full iPad Mode (unsafe)", isOn: bindingForTrollPad())
+                    Toggle("iPad Features (safe)", isOn: bindingForiPadFeatures())
+                }
+                    .disabled(cacheExtra?["+3Uf0Pm5F8Xy7Onyvko0vA"] as? String != "iPhone")
                 } footer: {
                     Text("Override user interface idiom to iPadOS, so you could use all iPadOS multitasking features on iPhone. Gives you the same capabilities as TrollPad, but may cause some issues.\nPLEASE DO NOT TURN OFF SHOW DOCK IN STAGE MANAGER OTHERWISE YOUR PHONE WILL BOOTLOOP WHEN ROTATING TO LANDSCAPE.")
                 }
@@ -293,27 +295,35 @@ struct EditorView: View {
         )
     }
 
-    private func mgkeybinding<T: Equatable>(_ keys: [String], type: T.Type = Int.self, default: T? = 0, enable: T? = 1) -> Binding<Bool> {
-        guard let cachextra = mg["CacheExtra"] as? NSMutableDictionary else {
+    private func bindingForiPadFeatures() -> Binding<Bool> {
+        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else {
             return State(initialValue: false).projectedValue
         }
-        
+
+        let keys = [
+            "mG0AnH/Vy1veoqoLRAIgTA",
+            "UCG5MkVahJxG1YULbbd5Bg",
+            "ZYqko/XM5zD3XBfN5RmaXA",
+            "nVh/gwNpy7Jv1NOk00CMrw",
+            "qeaj75wk3HF4DwQ8qbIi7g"
+        ]
+
         return Binding(
             get: {
-                if let value = cachextra[keys.first!] as? T?, let enable {
-                    return value == enable
+                if let value = cacheExtra[keys.first!] as? Int {
+                    return value == 1
                 }
                 return false
             },
             set: { enabled in
                 for key in keys {
                     if enabled {
-                        cachextra[key] = enable
+                        cacheExtra[key] = 1
                     } else {
-                        cachextra.removeObject(forKey: key)
+                        cacheExtra.removeObject(forKey: key)
                     }
                 }
-                
+                  
                 valid = validate(mg)
             }
         )
