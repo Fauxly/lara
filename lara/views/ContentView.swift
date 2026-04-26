@@ -395,9 +395,9 @@ struct ContentView: View {
                                                 LGView()
                                             }
                                         }
-
-                                        NavigationLink("3 App Bypass") {
-                                            AppsView(mgr: mgr)
+                                        } header: {
+											Text("App Management")
+                                                                               
                                         }
                                         Section {
                                             if !showfmintabs {
