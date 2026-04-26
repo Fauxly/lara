@@ -2,7 +2,7 @@ import SwiftUI
 
 struct EditorView: View {
     @ObservedObject private var mgr = laramgr.shared
-    @State private var mg: NSMutableDictionary = [:] // Инициализируем сразу
+    @State private var mg: NSMutableDictionary = [:] 
     @State private var status: String?
     @State private var alert: String?
     @State private var valid: Bool = true
@@ -42,7 +42,6 @@ struct EditorView: View {
             }
             chmod(ogmgurl.path, 0o644)
             
-            // Исправлено: безопасная загрузка словаря
             if let data = NSMutableDictionary(contentsOf: sysurl) {
                 initialDict = data
             }
@@ -56,7 +55,7 @@ struct EditorView: View {
            let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary,
            let subType = oPeik["ArtworkDeviceSubType"] as? Int {
             _selectedSubType = State(initialValue: subType)
-            // Используем DispatchQueue чтобы не менять AppStorage во время инициализации
+            
             DispatchQueue.main.async {
                 if UserDefaults.standard.integer(forKey: "ogSubType") == -1 {
                     UserDefaults.standard.set(subType, forKey: "ogSubType")
@@ -83,6 +82,7 @@ struct EditorView: View {
                     Toggle("Action Button (17+)", isOn: mgkeybinding(["cT44WE1EohiwRzhsZ8xEsw"]))
                     Toggle("Always on Display (18.0+)", isOn: mgkeybinding(["j8/Omm6s1lsmTDFsXjsBfA", "2OOJf1VhaM7NxfRok3HbWQ"]))
                     Toggle("Stage Manager", isOn: mgkeybinding(["qeaj75wk3HF4DwQ8qbIi7g"]))
+                    Toggle("Charge limit (17+)", isOn: mgkeybinding(["37NVydb//GP/GrhuTN+exg"]))
                 } header: {
                     Text("MobileGestalt")
                 }
@@ -93,7 +93,7 @@ struct EditorView: View {
                 } header: {
                     Text("iPadOS функции")
                 } footer: {
-                    Text("Используйте 'Безопасно', чтобы получить жесты и Док без поломки статус-бара.")
+                    Text("Используйте 'Безопасно', чтобы получить жесты iPad и Док, сохранив родные часы iPhone.")
                 }
 
                 Section {
@@ -175,7 +175,10 @@ struct EditorView: View {
     }
 
     private func bindingForiPadFeatures() -> Binding<Bool> {
-        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else { return .constant(false) }
+        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
+              let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
+            return .constant(false)
+        }
         
         let keys = [
             "mG0AnH/Vy1veoqoLRAIgTA", 
@@ -193,12 +196,20 @@ struct EditorView: View {
                 for key in keys {
                     if enabled { cacheExtra[key] = 1 } else { cacheExtra.removeObject(forKey: key) }
                 }
+                
+                if enabled {
+                    oPeik["ArtworkDeviceSubType"] = 2868 
+                    selectedSubType = 2868
+                } else {
+                    oPeik["ArtworkDeviceSubType"] = ogSubType
+                    selectedSubType = ogSubType
+                }
+                
                 valid = validate(mg)
             }
         )
     }
 
-    // Исправлено: убраны дефолтные значения типов, вызывавшие Warnings
     private func mgkeybinding(_ keys: [String]) -> Binding<Bool> {
         guard let cachextra = mg["CacheExtra"] as? NSMutableDictionary else { return .constant(false) }
         return Binding(
