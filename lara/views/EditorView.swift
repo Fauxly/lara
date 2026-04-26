@@ -93,7 +93,7 @@ struct EditorView: View {
                 } header: {
                     Text("iPadOS функции")
                 } footer: {
-                    Text("Используйте 'Безопасно', чтобы получить жесты iPad и Док, сохранив родные часы iPhone.")
+                    Text("Включайте 'Безопасно', чтобы получить жесты iPad и Док, сохранив родные часы iPhone.")
                 }
 
                 Section {
@@ -181,13 +181,15 @@ struct EditorView: View {
         }
         
         let keys = [
-            "mG0AnH/Vy1veoqoLRAIgTA", 
-            "UCG5MkVahJxG1YULbbd5Bg", 
-            "ZYqko/XM5zD3XBfN5RmaXA", 
-            "nVh/gwNpy7Jv1NOk00CMrw", 
-            "qeaj75wk3HF4DwQ8qbIi7g",
-            "8S7yD9lsDxHTr+9p7PvxJg", 
-            "7VshJj8DofXAtAnT6Y9itA"  
+            "mG0AnH/Vy1veoqoLRAIgTA", // MedusaFloating
+            "UCG5MkVahJxG1YULbbd5Bg", // MedusaOverlay
+            "ZYqko/XM5zD3XBfN5RmaXA", // MedusaPinned
+            "nVh/gwNpy7Jv1NOk00CMrw", // MedusaPIP
+            "qeaj75wk3HF4DwQ8qbIi7g", // EnhancedMultitasking
+            "8S7yD9lsDxHTr+9p7PvxJg", // iPad Gestures
+            "7VshJj8DofXAtAnT6Y9itA", // Medusa Capability
+            "yZf3GTRMGTuwSV/lD7Cagw", // Доп. жесты
+            "yhHcB0iH0d1XzPO/CFd3ow"  // Поддержка Pencil
         ]
 
         return Binding(
@@ -198,6 +200,7 @@ struct EditorView: View {
                 }
                 
                 if enabled {
+                    // Используем разрешение iPhone 16 Pro Max для активации функций
                     oPeik["ArtworkDeviceSubType"] = 2868 
                     selectedSubType = 2868
                 } else {
