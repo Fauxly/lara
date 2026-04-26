@@ -383,22 +383,22 @@ struct ContentView: View {
                                         } header: {
                                             Text("UI Tweaks")
                                         }
-                                        Section {
-                                            NavigationLink {
-                                                AppsView(mgr: mgr)
-                                            } label: {
-                                                Label("3 App Bypass", systemImage: "lock.open.fill")
-                                            }
+                        Section {
+                            NavigationLink {
+                                AppsView(mgr: mgr)
+                            } label: {
+                                Label("3 App Bypass", systemImage: "lock.open.fill")
+                            }
 
-                                        if os.majorVersion >= 26 {
-                                            NavigationLink("Liquid Glass") {
-                                                LGView()
-                                            }
-                                        }
-                                        } header: {
-											Text("App Management")
-                                                                               
-                                        }
+                            if os.majorVersion >= 26 {
+                                NavigationLink("Liquid Glass") {
+                                    LGView()
+                                }
+                            }
+                        } header: {
+						    Text("App Management")                                                                               
+                        }
+										
                                         Section {
                                             if !showfmintabs {
                                                 NavigationLink {
