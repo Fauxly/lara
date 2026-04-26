@@ -21,7 +21,7 @@ struct EditorView: View {
             case .iPhone14Pro: return "14 Pro (2556)"
             case .iPhone14ProMax: return "14 Pro Max (2796)"
             case .iPhone16Pro: return "iOS 18+:\n16 Pro (2622)"
-            case .iPhone16ProMax: return "iOS 18+:\n16 Pro Max (2868)"
+            case .iPhone16ProMax: return "16 Pro Max (2868)"
             }
         }
     }
@@ -33,18 +33,21 @@ struct EditorView: View {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         ogmgurl = docs.appendingPathComponent("ogmobilegestalt.plist")
         let sysurl = URL(fileURLWithPath: path)
+        
         do {
             if !FileManager.default.fileExists(atPath: ogmgurl.path) {
                 try FileManager.default.copyItem(at: sysurl, to: ogmgurl)
             }
             chmod(ogmgurl.path, 0o644)
-            _mg = State(initialValue: (try? NSMutableDictionary(contentsOf: URL(fileURLWithPath: path), error: ())) ?? [:])
+            
+            let data = try NSMutableDictionary(contentsOf: URL(fileURLWithPath: path))
+            _mg = State(initialValue: data)
         } catch {
             _mg = State(initialValue: [:])
-            _status = State(initialValue: "Failed to copy MobileGestalt: \(error)")
+            _status = State(initialValue: "Ошибка копирования MobileGestalt: \(error)")
         }
-        
-        if let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary, 
+
+        if let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
            let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary,
            let subType = oPeik["ArtworkDeviceSubType"] as? Int {
             _selectedSubType = State(initialValue: subType)
@@ -72,17 +75,18 @@ struct EditorView: View {
                     Toggle("Action Button (17+)", isOn: mgkeybinding(["cT44WE1EohiwRzhsZ8xEsw"]))
                     Toggle("Always on Display (18.0+)", isOn: mgkeybinding(["j8/Omm6s1lsmTDFsXjsBfA", "2OOJf1VhaM7NxfRok3HbWQ"]))
                     Toggle("Stage Manager", isOn: mgkeybinding(["qeaj75wk3HF4DwQ8qbIi7g"]))
+                    Toggle("Charge limit (17+)", isOn: mgkeybinding(["37NVydb//GP/GrhuTN+exg"]))
                 } header: {
                     Text("MobileGestalt")
                 }
 
                 Section {
-                    Toggle("iPad Mode (Ломает часы!)", isOn: bindingForTrollPad())
+                    Toggle("iPad Mode (Сбивает часы!)", isOn: bindingForTrollPad())
                     Toggle("iPad Features (Безопасно)", isOn: bindingForiPadFeatures())
                 } header: {
-                    Text("iPadOS Features")
+                    Text("iPadOS функции")
                 } footer: {
-                    Text("Используйте 'Безопасно', чтобы включить жесты iPad, не ломая статус-бар и часы на iPhone.")
+                    Text("Включайте 'Безопасно', чтобы получить жесты и Док без поломки статус-бара.")
                 }
 
                 Section {
@@ -90,15 +94,15 @@ struct EditorView: View {
                     Button("Apply Modified MobileGestalt") { apply() }
                         .disabled(!valid)
                 } header: {
-                    Text("Apply Changes")
+                    Text("Применить")
                 }
             }
             .navigationTitle("MobileGestalt")
-            .alert("Status", isPresented: .constant(status != nil)) {
-                Button("OK") { status = nil }
+            .alert("Статус", isPresented: Binding(get: { status != nil }, set: { _ in status = nil })) {
+                Button("OK", role: .cancel) { }
             } message: { Text(status ?? "") }
-            .alert("Done", isPresented: .constant(alert != nil)) {
-                Button("Cancel") { alert = nil }
+            .alert("Готово", isPresented: Binding(get: { alert != nil }, set: { _ in alert = nil })) {
+                Button("Отмена", role: .cancel) { }
                 Button("Respring") { mgr.respring() }
             } message: { Text(alert ?? "") }
         }
@@ -112,15 +116,16 @@ struct EditorView: View {
     private func load() {
         if let newMg = NSMutableDictionary(contentsOf: URL(fileURLWithPath: path)) {
             mg = newMg
+            valid = validate(mg)
         } else {
-            status = "Failed to load"
+            status = "Ошибка загрузки файла"
         }
     }
 
     private func apply() {
         guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
               let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
-            status = "Error in dictionary structure"
+            status = "Ошибка структуры словаря"
             return
         }
         
@@ -130,16 +135,16 @@ struct EditorView: View {
             let data = try PropertyListSerialization.data(fromPropertyList: mg, format: .binary, options: 0)
             let result = laramgr.shared.lara_overwritefile(target: path, data: data)
             if result.ok {
-                alert = "Applied! Respring to see changes."
+                alert = "Изменения применены. Нужен респринг."
             } else {
-                status = "Error: \(result.message)"
+                status = "Ошибка записи: \(result.message)"
             }
         } catch {
-            status = "Serialization failed"
+            status = "Ошибка сериализации: \(error.localizedDescription)"
         }
     }
 
-    // --- Функции привязки (Bindings) ---
+    // MARK: - Bindings
 
     private func bindingForTrollPad() -> Binding<Bool> {
         guard let cacheData = mg["CacheData"] as? NSMutableData,
@@ -152,7 +157,7 @@ struct EditorView: View {
         return Binding(
             get: { (cacheExtra[keys[0]] as? Int) == 1 },
             set: { enabled in
-                if enabled { status = "ВНИМАНИЕ: Это изменит DeviceClass и сломает верстку часов!" }
+                if enabled { status = "ВНИМАНИЕ: Это изменит DeviceClass на iPad. Часы и статус-бар могут сместиться!" }
                 cacheData.mutableBytes.storeBytes(of: enabled ? 3 : 1, toByteOffset: valueOffset, as: Int.self)
                 for key in keys {
                     if enabled { cacheExtra[key] = 1 } else { cacheExtra.removeObject(forKey: key) }
@@ -164,7 +169,16 @@ struct EditorView: View {
 
     private func bindingForiPadFeatures() -> Binding<Bool> {
         guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else { return .constant(false) }
-        let keys = ["mG0AnH/Vy1veoqoLRAIgTA", "UCG5MkVahJxG1YULbbd5Bg", "ZYqko/XM5zD3XBfN5RmaXA", "nVh/gwNpy7Jv1NOk00CMrw", "qeaj75wk3HF4DwQ8qbIi7g"]
+        
+        let keys = [
+            "mG0AnH/Vy1veoqoLRAIgTA", // MedusaFloating
+            "UCG5MkVahJxG1YULbbd5Bg", // MedusaOverlay
+            "ZYqko/XM5zD3XBfN5RmaXA", // MedusaPinned
+            "nVh/gwNpy7Jv1NOk00CMrw", // MedusaPIP
+            "qeaj75wk3HF4DwQ8qbIi7g", // EnhancedMultitasking
+            "8S7yD9lsDxHTr+9p7PvxJg", // iPad Gestures
+            "7VshJj8DofXAtAnT6Y9itA"  // Medusa Capability
+        ]
 
         return Binding(
             get: { (cacheExtra[keys[0]] as? Int) == 1 },
