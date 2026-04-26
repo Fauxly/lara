@@ -1,13 +1,3 @@
-//
-//  EditorView.swift
-//  lara
-//
-//  Created by ruter on 27.03.26.
-//
-
-// Most of the code is from Duy's SparseBox
-// thank you @jurre111
-
 import SwiftUI
 
 struct EditorView: View {
@@ -24,7 +14,6 @@ struct EditorView: View {
         case iPhone14ProMax = 2796
         case iPhone16Pro = 2622
         case iPhone16ProMax = 2868
-        // X gestures for SE?
 
         var id: Int { self.rawValue }
         var displayName: String {
@@ -49,26 +38,20 @@ struct EditorView: View {
                 try FileManager.default.copyItem(at: sysurl, to: ogmgurl)
             }
             chmod(ogmgurl.path, 0o644)
-            
-            _mg = State(initialValue: try NSMutableDictionary(contentsOf: URL(fileURLWithPath: path), error: ()))
+            _mg = State(initialValue: (try? NSMutableDictionary(contentsOf: URL(fileURLWithPath: path), error: ())) ?? [:])
         } catch {
             _mg = State(initialValue: [:])
             _status = State(initialValue: "Failed to copy MobileGestalt: \(error)")
         }
-        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary, let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
-            _status = State(initialValue: "Failed to get dictionaries from MobileGestalt. Reopen the page.")
-            return
+        
+        if let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary, 
+           let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary,
+           let subType = oPeik["ArtworkDeviceSubType"] as? Int {
+            _selectedSubType = State(initialValue: subType)
+            if ogSubType == -1 { ogSubType = subType }
+        } else {
+            _selectedSubType = State(initialValue: -1)
         }
-        guard let subType = oPeik["ArtworkDeviceSubType"] as? Int else {
-            _status = State(initialValue: "Failed to get SubType from MobileGestalt. Reopen the page.")
-            return
-        }
-        _selectedSubType = State(initialValue: subType)
-        // This only happens on the first load
-        if ogSubType == -1 {
-            ogSubType = subType
-        }
-
     }
 
     var body: some View {
@@ -77,9 +60,7 @@ struct EditorView: View {
                 Section {
                     HStack {
                         Text("Dynamic Island")
-                        
                         Spacer()
-                        
                         Picker("", selection: $selectedSubType) {
                             Text("Original (\(String(ogSubType)))").tag(ogSubType)
                             ForEach(SubType.allCases.filter { $0.rawValue != ogSubType }) { subtype in
@@ -89,241 +70,121 @@ struct EditorView: View {
                         .pickerStyle(.menu)
                     }
                     Toggle("Action Button (17+)", isOn: mgkeybinding(["cT44WE1EohiwRzhsZ8xEsw"]))
-                    Toggle("Allow installing iPadOS apps", isOn: mgkeybinding(["9MZ5AdH43csAUajl/dU+IQ"], type: [Int].self, default: [1], enable: [1, 2]))
                     Toggle("Always on Display (18.0+)", isOn: mgkeybinding(["j8/Omm6s1lsmTDFsXjsBfA", "2OOJf1VhaM7NxfRok3HbWQ"]))
-                    // Toggle("Apple Intelligence", isOn: bindingForAppleIntelligence())
-                    //    .disabled(requiresVersion(18))
-                    Toggle("Apple Pencil", isOn: mgkeybinding(["yhHcB0iH0d1XzPO/CFd3ow"]))
-                    Toggle("Boot chime", isOn: mgkeybinding(["QHxt+hGLaBPbQJbXiUJX3w"]))
-                    Toggle("Camera button (18.0rc+)", isOn: mgkeybinding(["CwvKxM2cEogD3p+HYgaW0Q", "oOV1jhJbdV3AddkcCg0AEA"]))
-                    Toggle("Charge limit (17+)", isOn: mgkeybinding(["37NVydb//GP/GrhuTN+exg"]))
-                    Toggle("Crash Detection (might not work)", isOn: mgkeybinding(["HCzWusHQwZDea6nNhaKndw"]))
-                    // Toggle("Dynamic Island (17.4+, might not work)", isOn: mgkeybinding(["YlEtTtHlNesRBMal1CqRaA"]))
-                    // Toggle("Disable region restrictions", isOn: bindingForRegionRestriction())
-                    Toggle("Internal Storage info", isOn: mgkeybinding(["LBJfwOEzExRxzlAnSuI7eg"]))
-                    // Toggle("Internal stuff", isOn: bindingForInternalStuff())
-                    Toggle("Security Research Device", isOn: mgkeybinding(["XYlJKKkj2hztRP1NWWnhlw"]))
-                    Toggle("Metal HUD for all apps", isOn: mgkeybinding(["EqrsVvjcYDdxHBiQmGhAWw"]))
                     Toggle("Stage Manager", isOn: mgkeybinding(["qeaj75wk3HF4DwQ8qbIi7g"]))
-                        .disabled(UIDevice.current.userInterfaceIdiom != .pad)
-                    if UIDevice._hasHomeButton() {
-                        Toggle("Tap to Wake (iPhone SE)", isOn: mgkeybinding(["yZf3GTRMGTuwSV/lD7Cagw"]))
-                    }
                 } header: {
                     Text("MobileGestalt")
-                } footer: {
-                    Text("Note: some tweaks may not work or cause instability.\nWARNING: Never enable features your device doesn't support.")
                 }
+
                 Section {
-                    let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary
-                Group {
-                    Toggle("Full iPad Mode (unsafe)", isOn: bindingForTrollPad())
-                    Toggle("iPad Features (safe)", isOn: bindingForiPadFeatures())
-                }
-                    .disabled(cacheExtra?["+3Uf0Pm5F8Xy7Onyvko0vA"] as? String != "iPhone")
-                } footer: {
-                    Text("Override user interface idiom to iPadOS, so you could use all iPadOS multitasking features on iPhone. Gives you the same capabilities as TrollPad, but may cause some issues.\nPLEASE DO NOT TURN OFF SHOW DOCK IN STAGE MANAGER OTHERWISE YOUR PHONE WILL BOOTLOOP WHEN ROTATING TO LANDSCAPE.")
-                }
-                Section {
-                    HStack {
-                        Text("Status")
-                        
-                        Spacer()
-                        
-                        if valid {
-                            Text("valid!")
-                                .monospaced(true)
-                                .foregroundColor(.green)
-                        } else {
-                            Text("invalid.")
-                                .monospaced(true)
-                                .foregroundColor(.red)
-                        }
-                    }
-                    Button() {
-                        load()
-                    } label: {
-                        Text("Reload from plist")
-                    }
-                    Button() {
-                        apply()
-                    } label: {
-                        Text("Apply Modified MobileGestalt")
-                    }
-                    .disabled(!valid)
+                    Toggle("iPad Mode (Ломает часы!)", isOn: bindingForTrollPad())
+                    Toggle("iPad Features (Безопасно)", isOn: bindingForiPadFeatures())
                 } header: {
-                    Text("Apply")
+                    Text("iPadOS Features")
                 } footer: {
-                    Text("Use at your own risk. Always keep a backup of your MobileGestalt somewhere safe.")
+                    Text("Используйте 'Безопасно', чтобы включить жесты iPad, не ломая статус-бар и часы на iPhone.")
                 }
-                
-                HStack(alignment: .top) {
-                    AsyncImage(url: URL(string: "https://github.com/jurre111.png")) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .frame(width: 40, height: 40)
-                    .clipShape(Circle())
-                    
-                    VStack(alignment: .leading) {
-                        Text("Jurre")
-                            .font(.headline)
-                        
-                        Text("The entire EditorView.")
-                            .font(.subheadline)
-                            .foregroundColor(Color.secondary)
-                    }
-                    
-                    Spacer()
-                }
-                .onTapGesture {
-                    if let url = URL(string: "https://github.com/jurre111"),
-                       UIApplication.shared.canOpenURL(url) {
-                        UIApplication.shared.open(url)
-                    }
+
+                Section {
+                    Button("Reload from plist") { load() }
+                    Button("Apply Modified MobileGestalt") { apply() }
+                        .disabled(!valid)
+                } header: {
+                    Text("Apply Changes")
                 }
             }
             .navigationTitle("MobileGestalt")
             .alert("Status", isPresented: .constant(status != nil)) {
                 Button("OK") { status = nil }
-            } message: {
-                Text(status ?? "")
-            }
+            } message: { Text(status ?? "") }
             .alert("Done", isPresented: .constant(alert != nil)) {
                 Button("Cancel") { alert = nil }
-                Button("Respring") {
-                    alert = nil
-                    mgr.respring()
-                }
-            } message: {
-                Text(alert ?? "uhh...")
-            }
-            .onAppear(perform: load)
+                Button("Respring") { mgr.respring() }
+            } message: { Text(alert ?? "") }
         }
     }
-    
+
     private func validate(_ dict: NSMutableDictionary) -> Bool {
         guard let cacheExtra = dict["CacheExtra"] as? NSMutableDictionary else { return false }
         return !cacheExtra.allKeys.isEmpty
     }
 
     private func load() {
-        do {
-            mg = try NSMutableDictionary(contentsOf: URL(fileURLWithPath: path), error: ())
-        } catch {
-            status = "Failed to load mobilegestalt"
+        if let newMg = NSMutableDictionary(contentsOf: URL(fileURLWithPath: path)) {
+            mg = newMg
+        } else {
+            status = "Failed to load"
         }
     }
 
     private func apply() {
+        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
+              let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
+            status = "Error in dictionary structure"
+            return
+        }
+        
+        oPeik["ArtworkDeviceSubType"] = selectedSubType
+        
         do {
-            if selectedSubType != -1 {
-                guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary, let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
-                    status = "Failed to get dictionaries from MobileGestalt."
-                    return
-                }
-                oPeik["ArtworkDeviceSubType"] = selectedSubType
-            } else {
-                status = "Selected SubType is -1? Reload the page."
-                return
-            }
-            let data = try PropertyListSerialization.data(
-                fromPropertyList: mg,
-                format: .binary,
-                options: 0
-            )
-            
-            let result = laramgr.shared.lara_overwritefile(
-                target: path,
-                data: data
-            )
-            
+            let data = try PropertyListSerialization.data(fromPropertyList: mg, format: .binary, options: 0)
+            let result = laramgr.shared.lara_overwritefile(target: path, data: data)
             if result.ok {
-                mgr.logmsg("overwrote MobileGestalt at \(path)")
-                alert = "Applied modified mobilegestalt, respring to see changes."
+                alert = "Applied! Respring to see changes."
             } else {
-                status = "overwrite failed: \(result.message)"
+                status = "Error: \(result.message)"
             }
-            
         } catch {
-            status = "serialization failed: \(error.localizedDescription)"
+            status = "Serialization failed"
         }
     }
+
+    // --- Функции привязки (Bindings) ---
+
     private func bindingForTrollPad() -> Binding<Bool> {
-        // We're going to overwrite DeviceClassNumber but we can't do it via CacheExtra, so we need to do it via CacheData instead
         guard let cacheData = mg["CacheData"] as? NSMutableData,
               let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else {
-            return State(initialValue: false).projectedValue
+            return .constant(false)
         }
         let valueOffset = FindCacheDataOffset("mtrAoWJ3gsq+I90ZnQ0vQw")
-        //print("Read value from \(cacheData.mutableBytes.load(fromByteOffset: valueOffset, as: Int.self))")
-        
-        let keys = [
-            "uKc7FPnEO++lVhHWHFlGbQ", // ipad
-            "mG0AnH/Vy1veoqoLRAIgTA", // MedusaFloatingLiveAppCapability
-            "UCG5MkVahJxG1YULbbd5Bg", // MedusaOverlayAppCapability
-            "ZYqko/XM5zD3XBfN5RmaXA", // MedusaPinnedAppCapability
-            "nVh/gwNpy7Jv1NOk00CMrw", // MedusaPIPCapability,
-            "qeaj75wk3HF4DwQ8qbIi7g", // DeviceSupportsEnhancedMultitasking
-        ]
+        let keys = ["uKc7FPnEO++lVhHWHFlGbQ", "mG0AnH/Vy1veoqoLRAIgTA", "UCG5MkVahJxG1YULbbd5Bg", "ZYqko/XM5zD3XBfN5RmaXA", "nVh/gwNpy7Jv1NOk00CMrw", "qeaj75wk3HF4DwQ8qbIi7g"]
+
         return Binding(
-            get: {
-                if let value = cacheExtra[keys.first!] as? Int? {
-                    return value == 1
-                }
-                return false
-            },
+            get: { (cacheExtra[keys[0]] as? Int) == 1 },
             set: { enabled in
-                if enabled {
-                    status = "Become iPadOS is a risky feature so please take note of the following:\n\n1. iOS Only apps, like WhatsApp, can lose data. It's recommended to offload these apps.\n2. The homescreen layout can get fucked if you have empty space.\n3. If you have an alphabetical password, it's very hard to get into your phone after locking.\n4. Any option with Dock under Stage Manager should NOT be modified.\n\n Only continue if you're okay with this. Else click reload from plist"
-                }
+                if enabled { status = "ВНИМАНИЕ: Это изменит DeviceClass и сломает верстку часов!" }
                 cacheData.mutableBytes.storeBytes(of: enabled ? 3 : 1, toByteOffset: valueOffset, as: Int.self)
                 for key in keys {
-                    if enabled {
-                        cacheExtra[key] = 1
-                    } else {
-                        // just remove the key as it will be pulled from device tree if missing
-                        cacheExtra.removeObject(forKey: key)
-                    }
+                    if enabled { cacheExtra[key] = 1 } else { cacheExtra.removeObject(forKey: key) }
                 }
-                
                 valid = validate(mg)
             }
         )
     }
 
     private func bindingForiPadFeatures() -> Binding<Bool> {
-        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else {
-            return State(initialValue: false).projectedValue
-        }
-
-        let keys = [
-            "mG0AnH/Vy1veoqoLRAIgTA",
-            "UCG5MkVahJxG1YULbbd5Bg",
-            "ZYqko/XM5zD3XBfN5RmaXA",
-            "nVh/gwNpy7Jv1NOk00CMrw",
-            "qeaj75wk3HF4DwQ8qbIi7g"
-        ]
+        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else { return .constant(false) }
+        let keys = ["mG0AnH/Vy1veoqoLRAIgTA", "UCG5MkVahJxG1YULbbd5Bg", "ZYqko/XM5zD3XBfN5RmaXA", "nVh/gwNpy7Jv1NOk00CMrw", "qeaj75wk3HF4DwQ8qbIi7g"]
 
         return Binding(
-            get: {
-                if let value = cacheExtra[keys.first!] as? Int {
-                    return value == 1
-                }
-                return false
-            },
+            get: { (cacheExtra[keys[0]] as? Int) == 1 },
             set: { enabled in
                 for key in keys {
-                    if enabled {
-                        cacheExtra[key] = 1
-                    } else {
-                        cacheExtra.removeObject(forKey: key)
-                    }
+                    if enabled { cacheExtra[key] = 1 } else { cacheExtra.removeObject(forKey: key) }
                 }
-                  
+                valid = validate(mg)
+            }
+        )
+    }
+
+    private func mgkeybinding<T: Equatable>(_ keys: [String], type: T.Type = Int.self, enable: T = 1 as! T) -> Binding<Bool> {
+        guard let cachextra = mg["CacheExtra"] as? NSMutableDictionary else { return .constant(false) }
+        return Binding(
+            get: { (cachextra[keys.first!] as? T) == enable },
+            set: { enabled in
+                for key in keys {
+                    if enabled { cachextra[key] = enable } else { cachextra.removeObject(forKey: key) }
+                }
                 valid = validate(mg)
             }
         )
