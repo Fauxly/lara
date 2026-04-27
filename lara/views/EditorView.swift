@@ -21,7 +21,7 @@ struct EditorView: View {
             case .iPhone14Pro: return "14 Pro (2556)"
             case .iPhone14ProMax: return "14 Pro Max (2796)"
             case .iPhone16Pro: return "iOS 18+:\n16 Pro (2622)"
-            case .iPhone16ProMax: return "iOS 18+:\n16 Pro Max (2868)"
+            case .iPhone16ProMax: return "16 Pro Max (2868)"
             }
         }
     }
@@ -33,29 +33,14 @@ struct EditorView: View {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         ogmgurl = docs.appendingPathComponent("ogmobilegestalt.plist")
         let sysurl = URL(fileURLWithPath: path)
-        
         var initialDict: NSMutableDictionary = [:]
-        
-        do {
-            if !FileManager.default.fileExists(atPath: ogmgurl.path) {
-                try FileManager.default.copyItem(at: sysurl, to: ogmgurl)
-            }
-            chmod(ogmgurl.path, 0o644)
-            
-            if let data = NSMutableDictionary(contentsOf: sysurl) {
-                initialDict = data
-            }
-        } catch {
-            print("Init error: \(error)")
-        }
-        
+        if let data = NSMutableDictionary(contentsOf: sysurl) { initialDict = data }
         _mg = State(initialValue: initialDict)
 
         if let cacheExtra = initialDict["CacheExtra"] as? NSMutableDictionary,
            let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary,
            let subType = oPeik["ArtworkDeviceSubType"] as? Int {
             _selectedSubType = State(initialValue: subType)
-            
             DispatchQueue.main.async {
                 if UserDefaults.standard.integer(forKey: "ogSubType") == -1 {
                     UserDefaults.standard.set(subType, forKey: "ogSubType")
@@ -69,7 +54,7 @@ struct EditorView: View {
             List {
                 Section {
                     HStack {
-                        Text("Dynamic Island")
+                        Text("Artwork SubType")
                         Spacer()
                         Picker("", selection: $selectedSubType) {
                             Text("Original (\(ogSubType == -1 ? "" : String(ogSubType)))").tag(ogSubType)
@@ -79,37 +64,29 @@ struct EditorView: View {
                         }
                         .pickerStyle(.menu)
                     }
-                    Toggle("Action Button (17+)", isOn: mgkeybinding(["cT44WE1EohiwRzhsZ8xEsw"]))
-                    Toggle("Always on Display (18.0+)", isOn: mgkeybinding(["j8/Omm6s1lsmTDFsXjsBfA", "2OOJf1VhaM7NxfRok3HbWQ"]))
+                    Toggle("Action Button", isOn: mgkeybinding(["cT44WE1EohiwRzhsZ8xEsw"]))
                     Toggle("Stage Manager", isOn: mgkeybinding(["qeaj75wk3HF4DwQ8qbIi7g"]))
-                    Toggle("Charge limit (17+)", isOn: mgkeybinding(["37NVydb//GP/GrhuTN+exg"]))
-                } header: {
-                    Text("MobileGestalt")
-                }
+                } header: { Text("MobileGestalt") }
 
                 Section {
-                    Toggle("iPad Mode (Сбивает часы!)", isOn: bindingForTrollPad())
-                    Toggle("iPad Features (Безопасно)", isOn: bindingForiPadFeatures())
+                    Toggle("iPad Mode (Stage Manager)", isOn: bindingForTrollPad())
                 } header: {
-                    Text("iPadOS функции")
+                    Text("Режим Планшета")
                 } footer: {
-                    Text("Включайте 'Безопасно', чтобы получить жесты iPad и Док, сохранив родные часы iPhone.")
+                    Text("Если часы съехали, попробуйте выбрать SubType '14 Pro (2556)' выше и применить еще раз.")
                 }
 
                 Section {
                     Button("Reload from plist") { load() }
-                    Button("Apply Modified MobileGestalt") { apply() }
+                    Button("Apply Changes") { apply() }
                         .disabled(!valid)
-                } header: {
-                    Text("Применить")
                 }
             }
             .navigationTitle("MobileGestalt")
-            .alert("Статус", isPresented: Binding(get: { status != nil }, set: { _ in status = nil })) {
+            .alert("Status", isPresented: Binding(get: { status != nil }, set: { _ in status = nil })) {
                 Button("OK", role: .cancel) { }
             } message: { Text(status ?? "") }
-            .alert("Готово", isPresented: Binding(get: { alert != nil }, set: { _ in alert = nil })) {
-                Button("Отмена", role: .cancel) { }
+            .alert("Done", isPresented: Binding(get: { alert != nil }, set: { _ in alert = nil })) {
                 Button("Respring") { mgr.respring() }
             } message: { Text(alert ?? "") }
         }
@@ -124,38 +101,26 @@ struct EditorView: View {
         if let newMg = NSMutableDictionary(contentsOf: URL(fileURLWithPath: path)) {
             mg = newMg
             valid = validate(mg)
-        } else {
-            status = "Ошибка загрузки файла"
         }
     }
 
     private func apply() {
         guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
-              let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
-            status = "Ошибка структуры словаря"
-            return
-        }
+              let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else { return }
         
         oPeik["ArtworkDeviceSubType"] = selectedSubType
         
         do {
             let data = try PropertyListSerialization.data(fromPropertyList: mg, format: .binary, options: 0)
             let result = laramgr.shared.lara_overwritefile(target: path, data: data)
-            if result.ok {
-                alert = "Применено! Нужен респринг."
-            } else {
-                status = "Ошибка записи: \(result.message)"
-            }
-        } catch {
-            status = "Ошибка: \(error.localizedDescription)"
-        }
+            if result.ok { alert = "Applied! Respring now." }
+        } catch { status = "Error" }
     }
-
-    // MARK: - Bindings
 
     private func bindingForTrollPad() -> Binding<Bool> {
         guard let cacheData = mg["CacheData"] as? NSMutableData,
-              let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary else {
+              let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
+              let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
             return .constant(false)
         }
         let valueOffset = FindCacheDataOffset("mtrAoWJ3gsq+I90ZnQ0vQw")
@@ -164,45 +129,16 @@ struct EditorView: View {
         return Binding(
             get: { (cacheExtra[keys[0]] as? Int) == 1 },
             set: { enabled in
-                if enabled { status = "ВНИМАНИЕ: Это изменит DeviceClass на iPad. Часы и статус-бар сместятся!" }
                 cacheData.mutableBytes.storeBytes(of: enabled ? 3 : 1, toByteOffset: valueOffset, as: Int.self)
                 for key in keys {
                     if enabled { cacheExtra[key] = 1 } else { cacheExtra.removeObject(forKey: key) }
                 }
-                valid = validate(mg)
-            }
-        )
-    }
-
-    private func bindingForiPadFeatures() -> Binding<Bool> {
-        guard let cacheExtra = mg["CacheExtra"] as? NSMutableDictionary,
-              let oPeik = cacheExtra["oPeik/9e8lQWMszEjbPzng"] as? NSMutableDictionary else {
-            return .constant(false)
-        }
-        
-        let keys = [
-            "mG0AnH/Vy1veoqoLRAIgTA", // MedusaFloating
-            "UCG5MkVahJxG1YULbbd5Bg", // MedusaOverlay
-            "ZYqko/XM5zD3XBfN5RmaXA", // MedusaPinned
-            "nVh/gwNpy7Jv1NOk00CMrw", // MedusaPIP
-            "qeaj75wk3HF4DwQ8qbIi7g", // EnhancedMultitasking
-            "8S7yD9lsDxHTr+9p7PvxJg", // iPad Gestures
-            "7VshJj8DofXAtAnT6Y9itA", // Medusa Capability
-            "yZf3GTRMGTuwSV/lD7Cagw", // Доп. жесты
-            "yhHcB0iH0d1XzPO/CFd3ow"  // Поддержка Pencil
-        ]
-
-        return Binding(
-            get: { (cacheExtra[keys[0]] as? Int) == 1 },
-            set: { enabled in
-                for key in keys {
-                    if enabled { cacheExtra[key] = 1 } else { cacheExtra.removeObject(forKey: key) }
-                }
                 
+                // ХИТРОСТЬ: Если включаем iPad Mode, ставим SubType от iPhone 14 Pro,
+                // чтобы попытаться спасти часы.
                 if enabled {
-                    // Используем разрешение iPhone 16 Pro Max для активации функций
-                    oPeik["ArtworkDeviceSubType"] = 2868 
-                    selectedSubType = 2868
+                    oPeik["ArtworkDeviceSubType"] = 2556
+                    selectedSubType = 2556
                 } else {
                     oPeik["ArtworkDeviceSubType"] = ogSubType
                     selectedSubType = ogSubType
